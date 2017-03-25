@@ -5,7 +5,7 @@ Usage
 -----
 
 ```
-colr REGEXP
+colr [-i] REGEXP
 ```
 
 regexp is a POSIX extended regular expression.
@@ -13,7 +13,7 @@ regexp is a POSIX extended regular expression.
 colr reads lines from standard input and writes to standard output.
 
 Each line is matched against the given regular expression.
-Currently, matches are always performed case sensitively.
+Matches are performed case insensitively if the `-i` option is given.
 
 Each submatch is coloured by introducing ANSI escape sequences to the output.
 Currently, the colours cannot be selected.

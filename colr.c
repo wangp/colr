@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <sys/types.h>
 #include <regex.h>
@@ -301,14 +302,31 @@ int
 main(int argc, char **argv)
 {
     regex_t reg;
+    int     reg_index;
+    int     cflags;
     int     rc;
     char    errbuf[128];
+    int     c;
 
-    if (argc != 2) {
+    cflags = REG_EXTENDED | REG_NEWLINE;
+
+    while ((c = getopt(argc, argv, "i")) != -1) {
+        switch (c) {
+            case 'i':
+                cflags |= REG_ICASE;
+                break;
+            case '?':
+                die("unrecognised option");
+                break;
+        }
+    }
+
+    reg_index = optind;
+    if (reg_index != argc - 1) {
         die("wrong number of arguments");
     }
 
-    rc = regcomp(&reg, argv[1], REG_EXTENDED | REG_NEWLINE);
+    rc = regcomp(&reg, argv[reg_index], cflags);
     if (rc != 0) {
         regerror(rc, &reg, errbuf, sizeof(errbuf));
         die(errbuf);
