@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -125,27 +126,74 @@ buffer_put(Buffer *buf, char c)
 /*-------------------------------------------------------------------------*/
 
 #define MAX_MATCH       32
-#define COLOR_NORMAL    -1
-#define COLOR_UNKNOWN   -2
+#define COLOR_UNKNOWN   -1
+#define COLOR_NORMAL    0
+
+static const char   *color_table[13] = {
+    "\x1B[0m",      // normal
+    "\x1B[31;01m",  // bold red
+    "\x1B[32;01m",  // bold green
+    "\x1B[33;01m",  // bold yellow
+    "\x1B[34;01m",  // bold blue
+    "\x1B[35;01m",  // bold magenta
+    "\x1B[36;01m",  // bold cyan
+    "\x1B[31m",     // dark red
+    "\x1B[32m",     // dark green
+    "\x1B[33m",     // dark yellow
+    "\x1B[34m",     // dark blue
+    "\x1B[35m",     // dark magenta
+    "\x1B[36m"      // dark cyan
+};
+
+static uint8_t  assigned_colors[MAX_MATCH];
+static int      num_assigned_colors;
+
+static int
+strcaseeq(const char *a, const char *b)
+{
+    return 0 == strcasecmp(a, b);
+}
+
+static int8_t
+parse_color(const char *s)
+{
+    if (strcaseeq(s, "normal"))      return 0; // COLOR_NORMAL
+    if (strcaseeq(s, "red"))         return 1;
+    if (strcaseeq(s, "green"))       return 2;
+    if (strcaseeq(s, "yellow"))      return 3;
+    if (strcaseeq(s, "blue"))        return 4;
+    if (strcaseeq(s, "magenta"))     return 5;
+    if (strcaseeq(s, "cyan"))        return 6;
+    if (strcaseeq(s, "darkred"))     return 7;
+    if (strcaseeq(s, "darkgreen"))   return 8;
+    if (strcaseeq(s, "darkyellow"))  return 9;
+    if (strcaseeq(s, "darkblue"))    return 10;
+    if (strcaseeq(s, "darkmagenta")) return 11;
+    if (strcaseeq(s, "darkcyan"))    return 12;
+    return COLOR_UNKNOWN;
+}
+
+static void
+assign_default_colors(void)
+{
+    int i;
+
+    num_assigned_colors = 6;
+    for (i = 0; i < num_assigned_colors; i++) {
+        assigned_colors[i] = i + 1;
+    }
+}
+
+static uint8_t
+submatch_color(int m)
+{
+    return assigned_colors[m % num_assigned_colors];
+}
 
 static const char *
-color_sequence(int i)
+color_sequence(uint8_t c)
 {
-    const char *normal = "\x1B[0m";
-    const char *bold[6] = {
-        "\x1B[31;01m",  // red
-        "\x1B[32;01m",  // green
-        "\x1B[33;01m",  // yellow
-        "\x1B[34;01m",  // blue
-        "\x1B[35;01m",  // magenta
-        "\x1B[36;01m"   // cyan
-    };
-
-    if (i < 0) {
-        return normal;
-    } else {
-        return bold[i % 6];
-    }
+    return color_table[c];
 }
 
 static void
@@ -168,12 +216,12 @@ read_line(FILE *stream, Buffer *buf)
     }
 }
 
-static char     *color_buf = NULL;
+static uint8_t  *color_buf = NULL;
 static size_t   color_buf_length = 0;
 
 static void
 print_matched(const Slice *slice, regmatch_t matches[MAX_MATCH], FILE *fp,
-    int *cur_color)
+    int8_t *cur_color)
 {
     size_t      i;
     int         m;
@@ -181,7 +229,7 @@ print_matched(const Slice *slice, regmatch_t matches[MAX_MATCH], FILE *fp,
 
     if (color_buf_length < slice->size) {
         color_buf_length = slice->size;
-        color_buf = realloc(color_buf, sizeof(char) * color_buf_length);
+        color_buf = realloc(color_buf, sizeof(uint8_t) * color_buf_length);
         if (color_buf == NULL) {
             die("out of memory");
         }
@@ -194,7 +242,7 @@ print_matched(const Slice *slice, regmatch_t matches[MAX_MATCH], FILE *fp,
     for (m = 0; m < MAX_MATCH; m++) {
         if (matches[m].rm_so != -1) {
             for (off = matches[m].rm_so; off < matches[m].rm_eo; off++) {
-                color_buf[off] = m;
+                color_buf[off] = submatch_color(m);
             }
         }
     }
@@ -209,7 +257,7 @@ print_matched(const Slice *slice, regmatch_t matches[MAX_MATCH], FILE *fp,
 }
 
 static void
-print_unmatched(const Slice *slice, FILE *fp, int *cur_color)
+print_unmatched(const Slice *slice, FILE *fp, int8_t *cur_color)
 {
     size_t i;
 
@@ -224,7 +272,8 @@ print_unmatched(const Slice *slice, FILE *fp, int *cur_color)
 }
 
 static void
-highlight_line(const regex_t *reg, const Buffer *buf, FILE *fp, int *cur_color)
+highlight_line(const regex_t *reg, const Buffer *buf, FILE *fp,
+    int8_t *cur_color)
 {
     size_t  offset = 0;
 
@@ -260,7 +309,7 @@ highlight(const regex_t *reg, FILE *inp, FILE *out)
     Buffer  buf;
     char    c;
     int     terminator;
-    int     cur_color;
+    int8_t  cur_color;
 
     buffer_init(&buf);
 
@@ -307,6 +356,7 @@ main(int argc, char **argv)
     int     rc;
     char    errbuf[128];
     int     c;
+    int     i;
 
     cflags = REG_EXTENDED | REG_NEWLINE;
 
@@ -322,14 +372,29 @@ main(int argc, char **argv)
     }
 
     reg_index = optind;
-    if (reg_index != argc - 1) {
-        die("wrong number of arguments");
+    if (reg_index >= argc) {
+        die("missing regular expression");
     }
 
     rc = regcomp(&reg, argv[reg_index], cflags);
     if (rc != 0) {
         regerror(rc, &reg, errbuf, sizeof(errbuf));
         die(errbuf);
+    }
+
+    num_assigned_colors = 0;
+    i = reg_index + 1;
+    while (i < argc && num_assigned_colors < MAX_MATCH) {
+        c = parse_color(argv[i]);
+        if (c == COLOR_UNKNOWN) {
+            die2("unrecognised color", argv[i]);
+        }
+        assigned_colors[num_assigned_colors] = c;
+        num_assigned_colors++;
+        i++;
+    }
+    if (num_assigned_colors == 0) {
+        assign_default_colors();
     }
 
     highlight(&reg, stdin, stdout);
