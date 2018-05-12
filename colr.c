@@ -131,22 +131,22 @@ buffer_put(Buffer *buf, char c)
 
 static const char   *color_table[17] = {
     "\x1B[0m",      // normal
-    "\x1B[30;01m",  // bold black
-    "\x1B[31;01m",  // bold red
-    "\x1B[32;01m",  // bold green
-    "\x1B[33;01m",  // bold yellow
-    "\x1B[34;01m",  // bold blue
-    "\x1B[35;01m",  // bold magenta
-    "\x1B[36;01m",  // bold cyan
-    "\x1B[37;01m",  // bold white
-    "\x1B[30m",     // black
-    "\x1B[31m",     // dark red
-    "\x1B[32m",     // dark green
-    "\x1B[33m",     // dark yellow
-    "\x1B[34m",     // dark blue
-    "\x1B[35m",     // dark magenta
-    "\x1B[36m",     // dark cyan
-    "\x1B[37m",     // white
+    "\x1B[1;30m",   // bold black
+    "\x1B[1;31m",   // bold red
+    "\x1B[1;32m",   // bold green
+    "\x1B[1;33m",   // bold yellow
+    "\x1B[1;34m",   // bold blue
+    "\x1B[1;35m",   // bold magenta
+    "\x1B[1;36m",   // bold cyan
+    "\x1B[1;37m",   // bold white
+    "\x1B[22;30m",  // black
+    "\x1B[22;31m",  // dark red
+    "\x1B[22;32m",  // dark green
+    "\x1B[22;33m",  // dark yellow
+    "\x1B[22;34m",  // dark blue
+    "\x1B[22;35m",  // dark magenta
+    "\x1B[22;36m",  // dark cyan
+    "\x1B[22;37m",  // white
 };
 
 static uint8_t  assigned_colors[MAX_MATCH];
