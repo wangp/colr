@@ -129,20 +129,24 @@ buffer_put(Buffer *buf, char c)
 #define COLOR_UNKNOWN   -1
 #define COLOR_NORMAL    0
 
-static const char   *color_table[13] = {
+static const char   *color_table[17] = {
     "\x1B[0m",      // normal
+    "\x1B[30;01m",  // bold black
     "\x1B[31;01m",  // bold red
     "\x1B[32;01m",  // bold green
     "\x1B[33;01m",  // bold yellow
     "\x1B[34;01m",  // bold blue
     "\x1B[35;01m",  // bold magenta
     "\x1B[36;01m",  // bold cyan
+    "\x1B[37;01m",  // bold white
+    "\x1B[30m",     // black
     "\x1B[31m",     // dark red
     "\x1B[32m",     // dark green
     "\x1B[33m",     // dark yellow
     "\x1B[34m",     // dark blue
     "\x1B[35m",     // dark magenta
-    "\x1B[36m"      // dark cyan
+    "\x1B[36m",     // dark cyan
+    "\x1B[37m",     // white
 };
 
 static uint8_t  assigned_colors[MAX_MATCH];
@@ -158,18 +162,22 @@ static int8_t
 parse_color(const char *s)
 {
     if (strcaseeq(s, "normal"))      return 0; // COLOR_NORMAL
-    if (strcaseeq(s, "red"))         return 1;
-    if (strcaseeq(s, "green"))       return 2;
-    if (strcaseeq(s, "yellow"))      return 3;
-    if (strcaseeq(s, "blue"))        return 4;
-    if (strcaseeq(s, "magenta"))     return 5;
-    if (strcaseeq(s, "cyan"))        return 6;
-    if (strcaseeq(s, "darkred"))     return 7;
-    if (strcaseeq(s, "darkgreen"))   return 8;
-    if (strcaseeq(s, "darkyellow"))  return 9;
-    if (strcaseeq(s, "darkblue"))    return 10;
-    if (strcaseeq(s, "darkmagenta")) return 11;
-    if (strcaseeq(s, "darkcyan"))    return 12;
+    if (strcaseeq(s, "boldblack"))   return 1;
+    if (strcaseeq(s, "red"))         return 2; // default assignment
+    if (strcaseeq(s, "green"))       return 3; // default assignment
+    if (strcaseeq(s, "yellow"))      return 4; // default assignment
+    if (strcaseeq(s, "blue"))        return 5; // default assignment
+    if (strcaseeq(s, "magenta"))     return 6; // default assignment
+    if (strcaseeq(s, "cyan"))        return 7; // default assignment
+    if (strcaseeq(s, "boldwhite"))   return 8;
+    if (strcaseeq(s, "black"))       return 9;
+    if (strcaseeq(s, "darkred"))     return 10;
+    if (strcaseeq(s, "darkgreen"))   return 11;
+    if (strcaseeq(s, "darkyellow"))  return 12;
+    if (strcaseeq(s, "darkblue"))    return 13;
+    if (strcaseeq(s, "darkmagenta")) return 14;
+    if (strcaseeq(s, "darkcyan"))    return 15;
+    if (strcaseeq(s, "white"))       return 16;
     return COLOR_UNKNOWN;
 }
 
@@ -180,7 +188,7 @@ assign_default_colors(void)
 
     num_assigned_colors = 6;
     for (i = 0; i < num_assigned_colors; i++) {
-        assigned_colors[i] = i + 1;
+        assigned_colors[i] = i + 2;
     }
 }
 
